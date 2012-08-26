@@ -1,0 +1,69 @@
+<div id="myModal" class="modal hide fade">
+    <!-- dialog contents -->
+    <div class="modal-body">
+        <span class="help-block">わけちチャット(笑)にようこそ！</span>
+        <form>
+            <input id="name_edit" type="text" placeholder="名前"/>
+        </form>
+    </div>
+    <!-- dialog buttons -->
+    <div class="modal-footer">
+        <a id="name_edit_ok" href="#" class="btn btn-primary">OK</a>
+    </div>
+</div>
+
+<div id="myAlart" class="modal hide fade">
+    <!-- dialog contents -->
+    <div class="modal-body">
+	
+    </div>
+    <!-- dialog buttons -->
+    <div class="modal-footer">
+        <a href="#" class="btn primary">OK</a>
+    </div>
+</div>
+
+<div class="navbar navbar-fixed-top">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </a>
+            <a class="brand" href="#">わけちチャット(笑)</a>
+
+            <div class="nav-collapse">
+                <ul class="nav">
+                    <li class="active"><a href="#">Home</a></li>
+                    <li><a href="http://pokosho.com/b/archives/1429">About</a></li>
+                    <li id="logout"><a href="#logout">Logout</a></li>
+                </ul>
+            </div>
+            <!--/.nav-collapse -->
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <form id="message_form" class="well form-inline">
+        <input id="message" type="text" class="span10" placeholder="message">
+        <button type="submit" class="btn btn-primary">投稿</button>
+    </form>
+
+    <table class="table table-bordered table-striped">
+        <tbody id="messages">
+	<% for (var i = 0; i < messages.length; i++) { %>
+		<tr>
+			<td style="width:20%; color:<%= messages[i].colorCode %>; <%= (messages[i].name == "わけち" ? "font-weight:bold;":"") %>"><%= messages[i].name %></td><td style="width:80%;"><%= messages[i].message %></td>
+		</tr>
+	<% } %>
+        </tbody>
+    </table>
+</div>
+<!-- /container -->
+
+</body>
+</html>
+
+
