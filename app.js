@@ -22,19 +22,36 @@ log.info("----- start -----");
  * 返信の必要有無を返す.
  */
 function checkNeedReplyFromWaketi(str) {
-	console.log("checkNeedReplyFromWaketi:" + str);
-	return (0 <= str.indexOf("waketi") || 
+	var res = (0 <= str.indexOf("waketi") || 
 			0 <= str.indexOf("わけち") ||
-			0 <= str.indexOf("ww") ||
-			0 <= str.indexOf("ｗｗ") ||
+			0 <= str.indexOf("w") ||
+			0 <= str.indexOf("ｗ") ||
 			0 <= str.indexOf("こん") || // こんにちは、こんばんは、こんちゃ
 			0 <= str.indexOf("おは") || 
 			0 <= str.indexOf("?") ||
 			0 <= str.indexOf("？") ||
 			0 <= str.indexOf("元気") ||
 			0 <= str.indexOf("ラーメン") ||
-			0 <= str.indexOf("食") 
+			0 <= str.indexOf("食") ||
+			0 <= str.indexOf("！") ||
+			0 <= str.indexOf("!") ||
+			0 <= str.indexOf("ランチ") 
 	       );
+	log.debug("checkNeedReplyFromWaketi:" + str + " res:" + res);
+	return res;
+}
+
+function getDateStr(date){
+	var year = date.getFullYear();
+	var month = date.getMonth() + 1;
+	var date = date.getDate();
+	if (month < 10) {
+		month = "0" + month;
+	}
+	if (date < 10) {
+		date = "0" + date;
+	}
+	return year + "/" + month + "/" + date;
 }
 
 // 超簡易srand
@@ -64,7 +81,7 @@ function getColorCode(str) {
 	bStr = (bStr.length == 1 ? "0" + bStr : bStr);
 	val += 1;
 	var colorCode = "#" + rStr + gStr + bStr;
-	console.log("colorCode:" + colorCode);
+	log.debug("colorCode:" + colorCode);
 	return colorCode;
 }
 
@@ -73,7 +90,7 @@ function validateName(str) {
 	if (validStr == "わけち") {
 		validStr = str.replace("わけち", "ブリュッセル");
 	}
-	console.log("validateName:" + validStr);
+	log.debug("validateName:" + validStr);
 	return validStr;
 }
 
@@ -98,7 +115,7 @@ app.configure('production', function(){
 
 // Routes
 
-console.log("start listen");
+log.info("start listen");
 var io = sio.listen(app);
 var broadCastSender = function(name, input) {
 	var reply = {
@@ -107,11 +124,18 @@ var broadCastSender = function(name, input) {
 		colorCode: getColorCode(name)
 	};
 	log.info(name + " : " + input);
+	if (name.lentgh > 10 || input.length > 140) {
+		return;
+	}
 	io.sockets.emit('message', reply);
 }
 
 io.sockets.on('connection', function(socket) {
-	console.log('socket. connected');
+	log.debug('socket. connected');
+	var queueSize = 2;
+	var queueIndex = 0;
+	var messageQueue = new Array(queueSize);
+
 	socket.on('message', function(msg){
 		//console.log('socket.on msg.name:' + msg.name + " msg.input:" + msg.input);
 		msg.name = validateName(msg.name);
@@ -119,44 +143,52 @@ io.sockets.on('connection', function(socket) {
 		var message = new Message();
 		message.message = msg.input;
 		message.name = msg.name;
-		console.log("insert name:" + message.name + " message:" + message.message + " obj:" + message);
+		messageQueue[queueIndex % queueSize] = message.message;
+		queueIndex++;
+		log.debug("insert name:" + message.name + " message:" + message.message + " obj:" + message);
 		message.save(
 			function(err){
 				if (err) {
-					console.log('insert failed');
+					log.error('insert failed:' + message.message);
 				} else {
-					console.log('insert OK');
+					log.debug('insert OK');
 				}
 			}
 		);
 		var rnd = Math.random() * 100;
-		console.log("insert end. check need reply from waketi:" + rnd);
-		if (rnd * 100 <= replyChance || checkNeedReplyFromWaketi(message.message)) {
-			console.log("start reply from waketi");
+		log.debug("insert end. check need reply from waketi:" + rnd);
+		// if (rnd * 100 <= replyChance || checkNeedReplyFromWaketi(message.message)) {
+		{
+			var replyTarget = "";
+			for (var i = 0; i < queueSize; i++) {
+				replyTarget += messageQueue[i] + "。";
+			}
+			log.info("start request to waketi:" + replyTarget);
 			munode.talk(msg.input,broadCastSender);
 		}
 	});
 });
 
 app.get('/', function(req, res) {
-	console.log("get root");
+	log.debug("get root");
 	// Model.find(conditions, [fields], [options], [callback])
 	// Message.find({}, ['name', 'message'], {sort:{'created_at':-1}, limit:300}, function(err, msgs) {
 	msgs = Message.find().sort({created_at:-1}).limit(150).exec(function(err, msgs) {
 
-	// 文字色を追加する(ユーザテーブルを作ってそこに持たせるべきだが…
-	var colorCodeHash = new Array();
-	for (var i = 0; i < msgs.length; i++) {
-		var msg = msgs[i];
-		console.log("msg check:" + msg.name);
-		if (colorCodeHash[msg.name] == undefined) {
-			colorCodeHash[msg.name] = getColorCode(msg.name);
-		}		
-		msg["colorCode"] = colorCodeHash[msg.name];
-	}
-	
-	
-	console.log("find res:" + msgs);
+		// 文字色を追加する(ユーザテーブルを作ってそこに持たせるべきだが…
+		var colorCodeHash = new Array();
+		for (var i = 0; i < msgs.length; i++) {
+			var msg = msgs[i];
+			log.debug("msg check:" + msg.name);
+			if (colorCodeHash[msg.name] == undefined) {
+				colorCodeHash[msg.name] = getColorCode(msg.name);
+			}		
+			msg["colorCode"] = colorCodeHash[msg.name];
+			msg["created_at"] = getDateStr(new Date(msg["created_at"]));
+		}
+
+
+		console.log("find res:" + msgs);
 		res.render('index', {title: 'waketi chat', messages:msgs});	
 	});
 });
