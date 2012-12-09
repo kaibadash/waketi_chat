@@ -164,7 +164,7 @@ io.sockets.on('connection', function(socket) {
 				replyTarget += messageQueue[i] + "。";
 			}
 			log.info("start request to waketi:" + replyTarget);
-			munode.talk(msg.input,broadCastSender);
+			munode.talk(replyTarget,broadCastSender);
 		}
 	});
 });
